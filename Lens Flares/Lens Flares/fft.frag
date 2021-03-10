@@ -5,50 +5,48 @@ layout (location = 0) in vec2 uv;
 layout (binding = 0) uniform sampler2D sampler_0;
 layout (binding = 1) uniform sampler2D sampler_1;
 
-layout (binding = 2) uniform Delta
-{
-	float u;
-	float v;
-} delta;
-layout (binding = 3) uniform bool inverse;
+layout (binding = 2) uniform Parameter{
+	vec2 deltaUV;
+	bool isInverse;
+} patameter;
 
 layout (location = 0) out vec4 atta_0;
 layout (location = 1) out vec4 atta_1;
 
-layout (constant_id = 0) const float PI = 3.14159265f;
+float PI = 3.14159265f;
 
 float calculateBrightness(vec3 rgb)
 {
 	return 0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b;
 }
 
-void dft(vec2 uv, double width, double height, vec4 re, vec4 im)
+void dft(vec2 uv, float width, float height, vec4 re, vec4 im)
 {
-	double temp = 0.0;
+	float temp = 0.0;
 
-	for(float u = 0.0f; u <= 1.0f; u+=delta.u)
+	for(float u = 0.0f; u <= 1.0f; u += patameter.deltaUV.x)
 	{
-		for(float v = 0.0f; v <= 1.0f; v+=delta.v)
+		for(float v = 0.0f; v <= 1.0f; v += patameter.deltaUV.y)
 		{
-			temp = uv.u * u * height + uv.v * v * width;
+			temp = uv.x * u * height + uv.y * v * width;
 			vec4 color = texture(sampler_0, vec2(u, v));
-			re += color * cos(-2 * PI * temp);
-			im += color * sin(-2 * PI * temp);
+			re += color * cos(-2.0f * PI * temp);
+			im += color * sin(-2.0f * PI * temp);
 		}
 	}
 }
 
-void idft(vec2 uv, double width, double height, vec4 real)
+void idft(vec2 uv, float width, float height, vec4 real)
 {
-	double temp;
+	float temp;
 
-	for(float u = 0.0f; u <= 1.0f; u += delta.u)
+	for(float u = 0.0f; u <= 1.0f; u += patameter.deltaUV.x)
 	{
-		for(float v = 0.0f; v <= 1.0f; v += delta.v)
+		for(float v = 0.0f; v <= 1.0f; v += patameter.deltaUV.y)
 		{
-			temp = uv.u * u * width + uv.v * v * height;
-			real += texture(sampler_0, vec2(u, v)) * cos(2 * PI * temp) - 
-				texture(sampler_1, vec2(u, v)) * sin(2 * PI * temp);
+			temp = uv.x * u * width + uv.y * v * height;
+			real += texture(sampler_0, vec2(u, v)) * cos(2.0f * PI * temp) - 
+				texture(sampler_1, vec2(u, v)) * sin(2.0f * PI * temp);
 		}
 	}
 	real = real / sqrt(width * height);
@@ -64,9 +62,9 @@ void idft(vec2 uv, double width, double height, vec4 real)
 
 void main()
 {
-	float width = 1.0 / delta.u;
-	float height = 1.0 / delta.v;
-	if(!inverse)
+	float width = 1.0 / patameter.deltaUV.x;
+	float height = 1.0 / patameter.deltaUV.y;
+	if(!patameter.isInverse)
 	{
 		vec4 re, im;
 		dft(uv, width, height, re, im);
@@ -75,6 +73,6 @@ void main()
 	}else{
 		vec4 real;
 		idft(uv, width, height, real);
-		atta_0 = color;
+		atta_0 = real;
 	}
 }

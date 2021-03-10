@@ -39,6 +39,12 @@
     <None Include="fft.frag">
       <Filter>资源文件</Filter>
     </None>
+    <None Include="complexMultiplication.frag">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="blend.frag">
+      <Filter>资源文件</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="lens_flares.h">

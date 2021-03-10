@@ -20,10 +20,14 @@ struct QueueFamilyIndices {
 class LensFlares
 {
 public:
+	LensFlares();
+	~LensFlares();
+	void run();
 
 private:
 	void initWindow();
-	void prepareVulkan();
+	void prepare();
+	void mainLoop();
 
 private:
 	void createInstance();
@@ -41,6 +45,9 @@ private:
 	void createDescriptorPool();
 	void setupDescriptorSetLayout();
 	void setupDescriptorSet();
+	void loadResources();
+	void buildCommandBuffers();
+	void createUniformBuffers();
 
 private:
 	bool isDeviceSuitable(VkPhysicalDevice device);
@@ -50,6 +57,7 @@ private:
 	struct FrameBufferAttachment;
 	void createAttachment(FrameBufferAttachment *attachment, VkFormat format, VkImageUsageFlags usage,
 		float width, float height);
+	VkShaderModule	createShaderModule(const std::string& filepath);
 
 private:
 	GLFWwindow*						window;
@@ -61,13 +69,11 @@ private:
 	VkQueue							presentQueue;
 	VkDevice						device;
 	SwapChain						swapchain;
-	VkRenderPass					renderPass;
 	VkPipelineCache					pipelineCache;
-	VkPipeline						pipeline;
-	VkPipelineLayout				pipelineLayout;
 	VkCommandPool					commandPool;
 	std::vector<VkCommandBuffer>	commandBuffers;
 	VkDescriptorPool				descriptorPool;
+	VkSampler						colorSampler;
 
 	VkSemaphore						semaphore;
 	VkSemaphore						renderSemaphore;
@@ -76,24 +82,36 @@ private:
 	uint32_t						width;
 	uint32_t						height;
 	
-	struct { 
-		VkBuffer buffer; 
-		VkDeviceMemory memory; 
-	} deviceVertex;
-	struct { 
-		VkDeviceMemory memory; 
-		VkBuffer buffer; 
-		VkDescriptorBufferInfo descriptor; 
-	} uniformBufferVS;
-	struct { 
-		glm::mat4 model; 
-		glm::mat4 view; 
-		glm::mat4 porjection; 
+	struct {
+		glm::mat4 model;
+		glm::mat4 view;
+		glm::mat4 porjection;
 	} uboVS;
+	struct {
+		glm::vec2 uv;
+		bool isInverse;
+	} fftUboVS;
+	struct {
+		float u;
+		float v;
+	} blurUboVS;
+	struct {
+		struct {
+			VkDescriptorBufferInfo descriptor;
+		} blur, dft, idft;
+		VkDeviceMemory memory;
+		VkBuffer buffer;
+	} uniformBuffers;
+	struct {
+		VkImageView view;
+		VkSampler	sampler;
+		VkImageLayout	imageLayout;
+	} textureDescriptor;
 	struct {
 		VkPipeline	bright;
 		VkPipeline	blur;
-		VkPipeline	dft;
+		VkPipeline	bright_dft;
+		VkPipeline	blur_dft;
 		VkPipeline	idft;
 		VkPipeline	complexMultiplication;
 		VkPipeline	blend;
@@ -109,7 +127,8 @@ private:
 	struct {
 		VkDescriptorSet		bright;
 		VkDescriptorSet		blur;
-		VkDescriptorSet		dft;
+		VkDescriptorSet		bright_dft;
+		VkDescriptorSet		blur_dft;
 		VkDescriptorSet		idft;
 		VkDescriptorSet		complexMultiplication;
 		VkDescriptorSet		blend;
@@ -136,9 +155,9 @@ private:
 	struct {
 		struct : public FrameBuffer {
 			FrameBufferAttachment color;
-		} bright, blur, idft, complexMultiplication, blend;
+		} bright, blur, idft, blend;
 		struct : public FrameBuffer {
 			FrameBufferAttachment real, imaginary;
-		} dft;
+		} bright_dft, blur_dft, complexMultiplication;
 	} frameBuffers;
 };

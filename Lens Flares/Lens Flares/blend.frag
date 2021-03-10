@@ -11,7 +11,7 @@ void main()
 {
 	vec3 hdrColor = texture(origin_image, uv).rgb;
 	vec3 bloomColor = texture(blur_image, uv).rgb;
-	hdr += bloomColor;
+	hdrColor += bloomColor;
 	vec3 result = vec3(1.0) - exp(-hdrColor);
 	result = pow(result, vec3(1.0 / 2.2));
 	color = vec4(result, 1.0f);
