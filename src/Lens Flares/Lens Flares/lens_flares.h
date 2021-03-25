@@ -31,10 +31,10 @@ private:
 
 private:
 	void createInstance();
+	void createSurface();
 	void setupDebugMessenger();
 	void pickPhysicalDevice();
 	void createSynchronizationPrimitives();
-	void createSurface();
 	void createLogicalDevice();
 	void createRenderPass();
 	void createPipelineCache();
@@ -58,10 +58,19 @@ private:
 	void createAttachment(FrameBufferAttachment *attachment, VkFormat format, VkImageUsageFlags usage,
 		float width, float height);
 	VkShaderModule	createShaderModule(const std::string& filepath);
+	bool checkValidationLayersSupport();
+	std::vector<const char*> getRequireExtensions();
+	static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
+		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+		VkDebugUtilsMessageTypeFlagsEXT messageType,
+		const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+		void* pUserData);
+	void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 
 private:
 	GLFWwindow*						window;
 	VkInstance						instance;
+	VkDebugUtilsMessengerEXT		debugMessenger;
 	VkPhysicalDevice				physicalDevice;
 	VkSurfaceKHR					surfaceKHR;
 	QueueFamilyIndices				indices;
