@@ -9,6 +9,8 @@
 
 #include "stb_image.h"
 
+//#define DEBUG
+
 const std::vector<const char*> validationLayers = {
 	"VK_LAYER_KHRONOS_validation"
 };
@@ -104,6 +106,9 @@ void LensFlares::mainLoop()
 		};
 		vkQueueSubmit(graphicQueue, 1, &submitInfo, waitFences[currentBuffer]);
 
+		vkWaitForFences(device, 1, &waitFences[currentBuffer], VK_TRUE, UINT64_MAX);
+		vkResetFences(device, 1, &waitFences[currentBuffer]);
+
 		VkPresentInfoKHR presentInfo = {
 			.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
 			.pNext = nullptr,
@@ -114,9 +119,6 @@ void LensFlares::mainLoop()
 			.pImageIndices = &currentBuffer
 		};
 		vkQueuePresentKHR(graphicQueue, &presentInfo);
-
-		vkWaitForFences(device, 1, &waitFences[currentBuffer], VK_TRUE, UINT64_MAX);
-		vkResetFences(device, 1, &waitFences[currentBuffer]);
 
 		glfwPollEvents();
 	}
