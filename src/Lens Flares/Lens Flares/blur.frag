@@ -1,11 +1,11 @@
 #version 450
 
-layout (location = 0, binding = 0) uniform sampler2D inputImage;
 layout (location = 0) in vec2 uv;
 
 layout (location = 0) out vec4 color;
 
-layout (binding = 0) uniform Delta
+layout (binding = 0) uniform sampler2D inputImage;
+layout (binding = 1) uniform Delta
 {
 	float u;
 	float v;

@@ -38,7 +38,8 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, const VkAllocationCallba
 		return func(instance, debugMessenger, pAllocator);
 }
 
-LensFlares::LensFlares()
+LensFlares::LensFlares(uint32_t width, uint32_t height)
+	: width(width), height(height)
 {
 	initWindow();
 	prepare();
@@ -59,7 +60,7 @@ void LensFlares::initWindow()
 	glfwInit();
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-	window = glfwCreateWindow(800, 800, "Triangle", 0, 0);
+	window = glfwCreateWindow(width, height, "LensFlares", 0, 0);
 }
 
 void LensFlares::prepare()
@@ -1366,7 +1367,7 @@ void LensFlares::createFrameBuffers()
 			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
 			.pNext = nullptr,
 			.flags = 0,
-			.attachmentCount = 1,
+			.attachmentCount = (uint32_t)attachmentDescriptions.size(),
 			.pAttachments = attachmentDescriptions.data(),
 			.subpassCount = 1,
 			.pSubpasses = &subpass,
@@ -1460,7 +1461,7 @@ void LensFlares::createFrameBuffers()
 			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
 			.pNext = nullptr,
 			.flags = 0,
-			.attachmentCount = 1,
+			.attachmentCount = (uint32_t)attachmentDescriptions.size(),
 			.pAttachments = attachmentDescriptions.data(),
 			.subpassCount = 1,
 			.pSubpasses = &subpass,
@@ -1540,7 +1541,7 @@ void LensFlares::createFrameBuffers()
 			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
 			.pNext = nullptr,
 			.flags = 0,
-			.attachmentCount = 1,
+			.attachmentCount = (uint32_t)attachmentDescriptions.size(),
 			.pAttachments = attachmentDescriptions.data(),
 			.subpassCount = 1,
 			.pSubpasses = &subpass,
@@ -1586,7 +1587,7 @@ void LensFlares::createFrameBuffers()
 			.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 			.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
 		};
-		attachmentDescriptions[0] = {
+		attachmentDescriptions[1] = {
 			.flags = 0,
 			.format = frameBuffers.complexMultiplication.imaginary.format,
 			.samples = VK_SAMPLE_COUNT_1_BIT,
@@ -1633,7 +1634,7 @@ void LensFlares::createFrameBuffers()
 			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
 			.pNext = nullptr,
 			.flags = 0,
-			.attachmentCount = 1,
+			.attachmentCount = (uint32_t)attachmentDescriptions.size(),
 			.pAttachments = attachmentDescriptions.data(),
 			.subpassCount = 1,
 			.pSubpasses = &subpass,
@@ -1713,7 +1714,7 @@ void LensFlares::createFrameBuffers()
 			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
 			.pNext = nullptr,
 			.flags = 0,
-			.attachmentCount = 1,
+			.attachmentCount = (uint32_t)attachmentDescriptions.size(),
 			.pAttachments = attachmentDescriptions.data(),
 			.subpassCount = 1,
 			.pSubpasses = &subpass,
@@ -1968,22 +1969,6 @@ void LensFlares::setupDescriptorSet()
 			.pSetLayouts = &descriptorSetLayouts.bright
 		};
 		vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, &descriptorSets.bright);
-
-		VkDescriptorImageInfo descriptorImageInfo = {
-			.sampler = textureDescriptor.sampler,
-			.imageView = textureDescriptor.view,
-			.imageLayout = textureDescriptor.imageLayout
-		};
-		VkWriteDescriptorSet writeDescriptorSet = {
-			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-			.pNext = nullptr,
-			.dstSet = descriptorSets.bright,
-			.dstBinding = 0,
-			.descriptorCount = 1,
-			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			.pImageInfo = &descriptorImageInfo
-		};
-		vkUpdateDescriptorSets(device, 1, &writeDescriptorSet, 0, nullptr);
 	}
 
 	// blur 
@@ -2339,12 +2324,39 @@ void LensFlares::setupDescriptorSet()
 void LensFlares::loadResources()
 {
 	int width, height, nchannels;
-	unsigned char* textureData = stbi_load("./led.jpg", &width, &height, &nchannels, 0);
+	unsigned char* textureData = stbi_load("./led.jpg", &width, &height, &nchannels, 4);
 
 	VkFormatProperties formatProperties;
 	vkGetPhysicalDeviceFormatProperties(physicalDevice, VK_FORMAT_R8G8B8A8_UNORM, &formatProperties);
 
 	assert(formatProperties.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT);
+
+	VkBuffer stagingBuffer;
+	VkDeviceMemory stagingMemory;
+	VkBufferCreateInfo bufferCreateInfo = {
+		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.size = uint32_t(width * height * 4),
+		.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+		.queueFamilyIndexCount = 0,
+		.pQueueFamilyIndices = nullptr
+	};
+	vkCreateBuffer(device, &bufferCreateInfo, nullptr, &stagingBuffer);
+	VkMemoryRequirements memoryReq;
+	vkGetBufferMemoryRequirements(device, stagingBuffer, &memoryReq);
+	VkMemoryAllocateInfo memoryAllocateInfo = {
+		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+		.pNext = nullptr,
+		.allocationSize = memoryReq.size,
+		.memoryTypeIndex = getMemoryTypeIndex(memoryReq.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+	};
+	vkAllocateMemory(device, &memoryAllocateInfo, nullptr, &stagingMemory);
+	void* data;
+	vkMapMemory(device, stagingMemory, 0, memoryReq.size, 0, &data);
+	memcpy(data, textureData, memoryReq.size);
+	vkUnmapMemory(device, stagingMemory);
 
 	VkImageCreateInfo imageCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -2361,30 +2373,56 @@ void LensFlares::loadResources()
 		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
 		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
 	};
-
 	VkImage image;
+	VkDeviceMemory deviceMemory;
 	vkCreateImage(device, &imageCreateInfo, nullptr, &image);
-	VkMemoryRequirements memoryReq;
 	vkGetImageMemoryRequirements(device, image, &memoryReq);
-	VkMemoryAllocateInfo memoryAllocateInfo = {
+	memoryAllocateInfo = {
 		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
 		.pNext = nullptr,
 		.allocationSize = memoryReq.size,
-		.memoryTypeIndex = getMemoryTypeIndex(memoryReq.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+		.memoryTypeIndex = getMemoryTypeIndex(memoryReq.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 	};
-	VkDeviceMemory deviceMemory;
 	vkAllocateMemory(device, &memoryAllocateInfo, nullptr, &deviceMemory);
 	vkBindImageMemory(device, image, deviceMemory, 0);
-	void* data;
-	VkImageSubresource subRes = {
+	
+	VkImageSubresourceRange imageSubresourceRange = {
 		.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-		.mipLevel = 1
+		.baseMipLevel = 0,
+		.levelCount = 1,
+		.baseArrayLayer = 0,
+		.layerCount = 0
 	};
-	VkSubresourceLayout	subResLayout;
-	vkGetImageSubresourceLayout(device, image, &subRes, &subResLayout);
-	vkMapMemory(device, deviceMemory, 0, memoryReq.size, 0, &data);
-	memcpy(data, textureData, memoryReq.size);
-	vkUnmapMemory(device, deviceMemory);
+	VkImageMemoryBarrier imageMemoryBarrier = {
+		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+		.pNext = nullptr,
+		.srcAccessMask = 0,
+		.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+		.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+		.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		.srcQueueFamilyIndex = 0,
+		.dstQueueFamilyIndex = 0,
+		.image = image,
+		.subresourceRange = imageSubresourceRange
+	};
+
+	VkCommandBuffer cmdBuffer = getCommandBuffer(true);
+	vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+		0, 0, nullptr, 0, nullptr, 1, &imageMemoryBarrier);
+	VkBufferImageCopy bufferImageCopy = {
+		.bufferOffset = memoryReq.size,
+		.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 1, 0, 0},
+		.imageExtent = {(uint32_t)width, (uint32_t)height, 1}
+	};
+	vkCmdCopyBufferToImage(cmdBuffer, stagingBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		1, &bufferImageCopy);
+	imageMemoryBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	imageMemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+	imageMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+	vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+		0, 0, nullptr, 0, nullptr, 1, &imageMemoryBarrier);
+	flushCommandBuffer(cmdBuffer);
 
 	VkSamplerCreateInfo samplerCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -2408,6 +2446,7 @@ void LensFlares::loadResources()
 		.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
 		.pNext = nullptr,
 		.flags = 0,
+		.image = image,
 		.viewType = VK_IMAGE_VIEW_TYPE_2D,
 		.format = VK_FORMAT_R8G8B8A8_UNORM,
 		.components = {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A},
@@ -2789,11 +2828,18 @@ void LensFlares::createAttachment(FrameBufferAttachment* attachment, VkFormat fo
 {
 	attachment->format = format;
 
-	VkImageAspectFlags aspectFlag;
-	if (usage & VK_IMAGE_ASPECT_COLOR_BIT)
+	VkImageAspectFlags aspectFlag = 0;
+	VkImageLayout imageLayout;
+	if (usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
+	{
 		aspectFlag = VK_IMAGE_ASPECT_COLOR_BIT;
+		imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	}
 	if (usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
+	{
 		aspectFlag = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+		imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	}
 
 	VkImageCreateInfo imageCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -2923,4 +2969,22 @@ void LensFlares::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInf
 	createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
 	createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 	createInfo.pfnUserCallback = debugCallback;
+}
+
+void LensFlares::flushCommandBuffer(VkCommandBuffer cmdBuffer)
+{
+	vkEndCommandBuffer(cmdBuffer);
+
+	VkSubmitInfo submitInfo = {
+		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+		.commandBufferCount = 1,
+		.pCommandBuffers = &cmdBuffer
+	};
+	VkFenceCreateInfo fenceCreateInfo = { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+	VkFence fence;
+	vkCreateFence(device, &fenceCreateInfo, nullptr, &fence);
+	vkQueueSubmit(graphicQueue, 1, &submitInfo, fence);
+	vkWaitForFences(device, 1, &fence, true, UINT64_MAX);
+	vkDestroyFence(device, fence, nullptr);
+	vkFreeCommandBuffers(device, commandPool, 1, &cmdBuffer);
 }

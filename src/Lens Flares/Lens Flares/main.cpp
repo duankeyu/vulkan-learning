@@ -2,7 +2,7 @@
 
 int main()
 {
-	LensFlares lensFlares;
+	LensFlares lensFlares(800, 800);
 	lensFlares.run();
 	return 0;
 }

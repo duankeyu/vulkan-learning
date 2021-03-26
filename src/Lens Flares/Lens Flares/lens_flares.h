@@ -20,7 +20,7 @@ struct QueueFamilyIndices {
 class LensFlares
 {
 public:
-	LensFlares();
+	LensFlares(uint32_t width, uint32_t height);
 	~LensFlares();
 	void run();
 
@@ -66,6 +66,7 @@ private:
 		const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
 		void* pUserData);
 	void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
+	void flushCommandBuffer(VkCommandBuffer cmdBuffer);
 
 private:
 	GLFWwindow*						window;
