@@ -79,6 +79,7 @@ void LensFlares::prepare()
 
 	loadResources();
 	createFrameBuffers();
+	createUniformBuffers();
 	createDescriptorPool();
 	setupDescriptorSetLayout();
 	setupDescriptorSet();
@@ -381,7 +382,19 @@ void LensFlares::createRenderPass()
 	
 	// bright_dft
 	{
-		VkAttachmentDescription colorAttachmentDescription = {
+		std::vector<VkAttachmentDescription> colorAttachmentDescriptions(2); 
+		colorAttachmentDescriptions[0] = {
+			.flags = 0,
+			.format = VK_FORMAT_B8G8R8A8_UNORM,
+			.samples = VK_SAMPLE_COUNT_1_BIT,
+			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+			.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+			.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+			.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+		};
+		colorAttachmentDescriptions[1] = {
 			.flags = 0,
 			.format = VK_FORMAT_B8G8R8A8_UNORM,
 			.samples = VK_SAMPLE_COUNT_1_BIT,
@@ -395,7 +408,7 @@ void LensFlares::createRenderPass()
 
 		std::vector<VkAttachmentReference> colorAttachmentReferences = {
 			{0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},
-			{0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL}
+			{1, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL}
 		};
 
 		VkSubpassDescription subpassDescription = {
@@ -435,8 +448,8 @@ void LensFlares::createRenderPass()
 			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
 			.pNext = nullptr,
 			.flags = 0,
-			.attachmentCount = 1,
-			.pAttachments = &colorAttachmentDescription,
+			.attachmentCount = (uint32_t)colorAttachmentDescriptions.size(),
+			.pAttachments = colorAttachmentDescriptions.data(),
 			.subpassCount = 1,
 			.pSubpasses = &subpassDescription,
 			.dependencyCount = (uint32_t)dependencies.size(),
@@ -521,7 +534,19 @@ void LensFlares::createRenderPass()
 
 	// blur_dft
 	{
-		VkAttachmentDescription colorAttachmentDescription = {
+		std::vector<VkAttachmentDescription> colorAttachmentDescriptions(2);
+		colorAttachmentDescriptions[0] = {
+			.flags = 0,
+			.format = VK_FORMAT_B8G8R8A8_UNORM,
+			.samples = VK_SAMPLE_COUNT_1_BIT,
+			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+			.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+			.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+			.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+		};
+		colorAttachmentDescriptions[1] = {
 			.flags = 0,
 			.format = VK_FORMAT_B8G8R8A8_UNORM,
 			.samples = VK_SAMPLE_COUNT_1_BIT,
@@ -535,7 +560,7 @@ void LensFlares::createRenderPass()
 
 		std::vector<VkAttachmentReference> colorAttachmentReferences = {
 			{0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},
-			{0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL}
+			{1, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL}
 		};
 
 		VkSubpassDescription subpassDescription = {
@@ -575,8 +600,8 @@ void LensFlares::createRenderPass()
 			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
 			.pNext = nullptr,
 			.flags = 0,
-			.attachmentCount = 1,
-			.pAttachments = &colorAttachmentDescription,
+			.attachmentCount = (uint32_t)colorAttachmentDescriptions.size(),
+			.pAttachments = &colorAttachmentDescriptions[0],
 			.subpassCount = 1,
 			.pSubpasses = &subpassDescription,
 			.dependencyCount = (uint32_t)dependencies.size(),
@@ -996,8 +1021,8 @@ void LensFlares::createPipeline()
 		VkShaderModule vertex;
 		VkShaderModule fragment;
 		try{
-			vertex = createShaderModule("./feature_extraction.vert");
-			fragment = createShaderModule("./feature_extraction.frag");
+			vertex = createShaderModule("./feature_extraction.vert.spv");
+			fragment = createShaderModule("./feature_extraction.frag.spv");
 		}catch (const std::exception& e){
 			throw e;
 		}
@@ -1014,8 +1039,8 @@ void LensFlares::createPipeline()
 		VkShaderModule vertex;
 		VkShaderModule fragment;
 		try {
-			vertex = createShaderModule("./feature_extraction.vert");
-			fragment = createShaderModule("./blur.frag");
+			vertex = createShaderModule("./feature_extraction.vert.spv");
+			fragment = createShaderModule("./blur.frag.spv");
 		}
 		catch (const std::exception& e) {
 			throw e;
@@ -1033,8 +1058,8 @@ void LensFlares::createPipeline()
 		VkShaderModule vertex;
 		VkShaderModule fragment;
 		try {
-			vertex = createShaderModule("./feature_extraction.vert");
-			fragment = createShaderModule("./complexMultiplication.frag");
+			vertex = createShaderModule("./feature_extraction.vert.spv");
+			fragment = createShaderModule("./complexMultiplication.frag.spv");
 		}
 		catch (const std::exception& e) {
 			throw e;
@@ -1052,8 +1077,8 @@ void LensFlares::createPipeline()
 		VkShaderModule vertex;
 		VkShaderModule fragment;
 		try {
-			vertex = createShaderModule("./feature_extraction.vert");
-			fragment = createShaderModule("./fft.frag");
+			vertex = createShaderModule("./feature_extraction.vert.spv");
+			fragment = createShaderModule("./fft.frag.spv");
 		}
 		catch (const std::exception& e) {
 			throw e;
@@ -1071,8 +1096,8 @@ void LensFlares::createPipeline()
 		VkShaderModule vertex;
 		VkShaderModule fragment;
 		try {
-			vertex = createShaderModule("./feature_extraction.vert");
-			fragment = createShaderModule("./blend.frag");
+			vertex = createShaderModule("./feature_extraction.vert.spv");
+			fragment = createShaderModule("./blend.frag.spv");
 		}
 		catch (const std::exception& e) {
 			throw e;
@@ -1090,8 +1115,8 @@ void LensFlares::createPipeline()
 		VkShaderModule vertex;
 		VkShaderModule fragment;
 		try {
-			vertex = createShaderModule("./feature_extraction.vert");
-			fragment = createShaderModule("./fft.frag");
+			vertex = createShaderModule("./feature_extraction.vert.spv");
+			fragment = createShaderModule("./fft.frag.spv");
 		}
 		catch (const std::exception& e) {
 			throw e;
@@ -1758,14 +1783,15 @@ void LensFlares::createCommandBuffers()
 void LensFlares::createDescriptorPool()
 {
 	std::vector<VkDescriptorPoolSize> descriptorPoolSizes = {
-		{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1}
+		{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 4},
+		{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 24}
 	};
 	VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = {
 		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
 		nullptr,
 		0,
-		1,
-		1,
+		64,
+		descriptorPoolSizes.size(),
 		descriptorPoolSizes.data()
 	};
 	if (vkCreateDescriptorPool(device, &descriptorPoolCreateInfo, nullptr, &descriptorPool) != VK_SUCCESS)
@@ -1965,10 +1991,27 @@ void LensFlares::setupDescriptorSet()
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 			.pNext = nullptr,
 			.descriptorPool = descriptorPool,
-			.descriptorSetCount = 0,
+			.descriptorSetCount = 1,
 			.pSetLayouts = &descriptorSetLayouts.bright
 		};
 		vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, &descriptorSets.bright);
+
+		VkDescriptorImageInfo descriptorImageInfo = {
+			.sampler = textureDescriptor.sampler,
+			.imageView = textureDescriptor.view,
+			.imageLayout = textureDescriptor.imageLayout
+		};
+		std::vector<VkWriteDescriptorSet> writeDescriptorSets(1);
+		writeDescriptorSets[0] = {
+			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			.pNext = nullptr,
+			.dstSet = descriptorSets.bright,
+			.dstBinding = 0,
+			.descriptorCount = 1,
+			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.pImageInfo = &descriptorImageInfo
+		};
+		vkUpdateDescriptorSets(device, 1, &writeDescriptorSets[0], 0, nullptr);
 	}
 
 	// blur 
@@ -1988,7 +2031,7 @@ void LensFlares::setupDescriptorSet()
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 			.pNext = nullptr,
 			.descriptorPool = descriptorPool,
-			.descriptorSetCount = 0,
+			.descriptorSetCount = 1,
 			.pSetLayouts = &descriptorSetLayouts.blur
 		};
 		vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, &descriptorSets.blur);
@@ -2020,7 +2063,7 @@ void LensFlares::setupDescriptorSet()
 		vkUpdateDescriptorSets(device, 2, &writeDescriptorSets[0], 0, nullptr);
 	}
 
-	// blur_dft
+	// dft
 	{
 		VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
@@ -2033,11 +2076,12 @@ void LensFlares::setupDescriptorSet()
 		};
 		vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayouts.dft);
 
+		// blur
 		VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 			.pNext = nullptr,
 			.descriptorPool = descriptorPool,
-			.descriptorSetCount = 0,
+			.descriptorSetCount = 1,
 			.pSetLayouts = &descriptorSetLayouts.dft
 		};
 		vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, &descriptorSets.blur_dft);
@@ -2061,60 +2105,19 @@ void LensFlares::setupDescriptorSet()
 			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 			.pNext = nullptr,
 			.dstSet = descriptorSets.blur_dft,
-			.dstBinding = 1,
+			.dstBinding = 2,
 			.descriptorCount = 1,
 			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 			.pBufferInfo = &uniformBuffers.dft.descriptor
 		};
 		vkUpdateDescriptorSets(device, 2, &writeDescriptorSets[0], 0, nullptr);
-	}
 
-	// bright_dft
-	{
-		VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-			.pNext = nullptr,
-			.flags = 0,
-			.setLayoutCount = 1,
-			.pSetLayouts = &descriptorSetLayouts.dft,
-			.pushConstantRangeCount = 0,
-			.pPushConstantRanges = nullptr
-		};
-		vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayouts.dft);
-
-		VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {
-			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-			.pNext = nullptr,
-			.descriptorPool = descriptorPool,
-			.descriptorSetCount = 0,
-			.pSetLayouts = &descriptorSetLayouts.dft
-		};
+		// bright
 		vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, &descriptorSets.bright_dft);
 
-		VkDescriptorImageInfo descriptorImageInfo = {
-			.sampler = colorSampler,
-			.imageView = frameBuffers.bright.color.view,
-			.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-		};
-		std::vector<VkWriteDescriptorSet> writeDescriptorSets(2);
-		writeDescriptorSets[0] = {
-			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-			.pNext = nullptr,
-			.dstSet = descriptorSets.bright_dft,
-			.dstBinding = 0,
-			.descriptorCount = 1,
-			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			.pImageInfo = &descriptorImageInfo
-		};
-		writeDescriptorSets[1] = {
-			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-			.pNext = nullptr,
-			.dstSet = descriptorSets.bright_dft,
-			.dstBinding = 1,
-			.descriptorCount = 1,
-			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			.pBufferInfo = &uniformBuffers.dft.descriptor
-		};
+		descriptorImageInfo.imageView = frameBuffers.bright.color.view;
+		writeDescriptorSets[0].dstSet = descriptorSets.bright_dft;
+		writeDescriptorSets[1].dstSet = descriptorSets.bright_dft;
 		vkUpdateDescriptorSets(device, 2, &writeDescriptorSets[0], 0, nullptr);
 	}
 
@@ -2135,7 +2138,7 @@ void LensFlares::setupDescriptorSet()
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 			.pNext = nullptr,
 			.descriptorPool = descriptorPool,
-			.descriptorSetCount = 0,
+			.descriptorSetCount = 1,
 			.pSetLayouts = &descriptorSetLayouts.complexMultiplication
 		};
 		vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, &descriptorSets.complexMultiplication);
@@ -2154,12 +2157,12 @@ void LensFlares::setupDescriptorSet()
 		descriptorImageInfos[2] = {
 			.sampler = colorSampler,
 			.imageView = frameBuffers.blur_dft.real.view,
-			.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+			.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 		};
 		descriptorImageInfos[3] = {
 			.sampler = colorSampler,
 			.imageView = frameBuffers.blur_dft.imaginary.view,
-			.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+			.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 		};
 		std::vector<VkWriteDescriptorSet> writeDescriptorSets(4);
 		writeDescriptorSets[0] = {
@@ -2218,7 +2221,7 @@ void LensFlares::setupDescriptorSet()
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 			.pNext = nullptr,
 			.descriptorPool = descriptorPool,
-			.descriptorSetCount = 0,
+			.descriptorSetCount = 1,
 			.pSetLayouts = &descriptorSetLayouts.idft
 		};
 		vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, &descriptorSets.idft);
@@ -2282,7 +2285,7 @@ void LensFlares::setupDescriptorSet()
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 			.pNext = nullptr,
 			.descriptorPool = descriptorPool,
-			.descriptorSetCount = 0,
+			.descriptorSetCount = 1,
 			.pSetLayouts = &descriptorSetLayouts.blend
 		};
 		vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, &descriptorSets.blend);
@@ -2353,6 +2356,7 @@ void LensFlares::loadResources()
 		.memoryTypeIndex = getMemoryTypeIndex(memoryReq.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
 	};
 	vkAllocateMemory(device, &memoryAllocateInfo, nullptr, &stagingMemory);
+	vkBindBufferMemory(device, stagingBuffer, stagingMemory, 0);
 	void* data;
 	vkMapMemory(device, stagingMemory, 0, memoryReq.size, 0, &data);
 	memcpy(data, textureData, memoryReq.size);
@@ -2369,7 +2373,7 @@ void LensFlares::loadResources()
 		.arrayLayers = 1,
 		.samples = VK_SAMPLE_COUNT_1_BIT,
 		.tiling = VK_IMAGE_TILING_OPTIMAL,
-		.usage = VK_IMAGE_USAGE_SAMPLED_BIT,
+		.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
 		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
 	};
@@ -2391,7 +2395,7 @@ void LensFlares::loadResources()
 		.baseMipLevel = 0,
 		.levelCount = 1,
 		.baseArrayLayer = 0,
-		.layerCount = 0
+		.layerCount = 1
 	};
 	VkImageMemoryBarrier imageMemoryBarrier = {
 		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -2410,8 +2414,8 @@ void LensFlares::loadResources()
 	vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 		0, 0, nullptr, 0, nullptr, 1, &imageMemoryBarrier);
 	VkBufferImageCopy bufferImageCopy = {
-		.bufferOffset = memoryReq.size,
-		.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 1, 0, 0},
+		.bufferOffset = 0,
+		.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1},
 		.imageExtent = {(uint32_t)width, (uint32_t)height, 1}
 	};
 	vkCmdCopyBufferToImage(cmdBuffer, stagingBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -2707,7 +2711,7 @@ void LensFlares::createUniformBuffers()
 	.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 	.pNext = nullptr,
 	.flags = 0,
-	.size = sizeof(blurUboVS) + sizeof(fftUboVS) * 2,
+	.size = uint32_t(192),
 	.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 	.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
 	};
@@ -2730,12 +2734,12 @@ void LensFlares::createUniformBuffers()
 	};
 	uniformBuffers.dft.descriptor = {
 		.buffer = uniformBuffers.buffer,
-		.offset = sizeof(blurUboVS),
+		.offset = 64,
 		.range = sizeof(fftUboVS)
 	};
 	uniformBuffers.idft.descriptor = {
 		.buffer = uniformBuffers.buffer,
-		.offset = sizeof(blurUboVS) + sizeof(fftUboVS),
+		.offset = 128,
 		.range = sizeof(fftUboVS)
 	};
 
@@ -2745,10 +2749,10 @@ void LensFlares::createUniformBuffers()
 	memcpy(data, &blurUboVS, sizeof(blurUboVS));
 	vkUnmapMemory(device, uniformBuffers.memory);
 	fftUboVS = { glm::vec2(1.0f / width, 1.0f / height), false };
-	vkMapMemory(device, uniformBuffers.memory, sizeof(blurUboVS), sizeof(fftUboVS), 0, &data);
+	vkMapMemory(device, uniformBuffers.memory, 64, sizeof(fftUboVS), 0, &data);
 	memcpy(data, &fftUboVS, sizeof(fftUboVS));
 	vkUnmapMemory(device, uniformBuffers.memory);
-	vkMapMemory(device, uniformBuffers.memory, sizeof(blurUboVS) + sizeof(fftUboVS), sizeof(fftUboVS), 0, &data);
+	vkMapMemory(device, uniformBuffers.memory, 128, sizeof(fftUboVS), 0, &data);
 	fftUboVS.isInverse = true;
 	memcpy(data, &fftUboVS, sizeof(fftUboVS));
 	vkUnmapMemory(device, uniformBuffers.memory);
@@ -2852,7 +2856,7 @@ void LensFlares::createAttachment(FrameBufferAttachment* attachment, VkFormat fo
 		.arrayLayers = 1,
 		.samples = VK_SAMPLE_COUNT_1_BIT,
 		.tiling = VK_IMAGE_TILING_OPTIMAL,
-		.usage = usage,
+		.usage = usage | VK_IMAGE_USAGE_SAMPLED_BIT,
 		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
 		.queueFamilyIndexCount = 0,
 		.pQueueFamilyIndices = nullptr,
